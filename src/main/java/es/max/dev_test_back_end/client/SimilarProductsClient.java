@@ -1,6 +1,11 @@
 package es.max.dev_test_back_end.client;
 
+import es.max.dev_test_back_end.exception.ProductNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -10,18 +15,22 @@ public class SimilarProductsClient {
 
     private final RestClient restClient;
 
-    public SimilarProductsClient(RestClient.Builder builder) {
-        this.restClient = builder
-                .baseUrl("http://localhost:3001")
+    public SimilarProductsClient(@Value("${external.api.base-url}") String baseUrl,
+                                 ClientHttpRequestFactory requestFactory) {
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
                 .build();
     }
-    //todo
+
     public List<Integer> getSimilarProductIds(String productId) {
-        return restClient.get()
-                .uri("/product/{id}/similarids", productId)
-                .retrieve()
-                .body(List.class);
+        try {
+            return restClient.get()
+                    .uri("/product/{id}/similarids", productId)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {});
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new ProductNotFoundException(productId);
+        }
     }
-
-
 }
